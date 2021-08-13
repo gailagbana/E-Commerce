@@ -31,10 +31,10 @@ async function editCategoryById(request, response) {
     const { _id } = request.params;
     const { body } = request;
     if (!_id) throw new Error("Category Id required to edit category.");
-    if (!body.length) throw new Error("Body is empty");
+    if (body.length == 0) throw new Error("Body is empty");
 
     const findAndEditCategory = await Category.updateOne(
-      _id,
+      { _id },
       { ...body },
       { upsert: true }
     );

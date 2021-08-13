@@ -15,7 +15,7 @@ async function createItem(request, response) {
 
     const existingItem = await Items.findOne({ itemTitle });
 
-    if (existingItem.length) throw new Error("Item already exists.");
+    if (existingItem !== null) throw new Error("Item already exists.");
 
     const item = new Items({
       itemTitle,
@@ -26,9 +26,7 @@ async function createItem(request, response) {
     });
     await item.save();
 
-    const result = {
-      item,
-    };
+    const result = item;
     return await processSuccess(response, result);
   } catch (e) {
     return await processError(response, e.message);
@@ -85,14 +83,7 @@ async function deleteItemById(request, response, next) {
   try {
     const { id } = request.params;
 
-    const findAndDeleteItem = await Items.findByIdAndDelete({ _id: id });
-    if (findAndDeleteItem == null)
-      throw new Error("Could not find or delete Item");
-
-    const result = {
-      data: null,
-      message: "items has been deleted",
-    };
+    const result = await Items.findByIdAndDelete({ _id: id });
     return await processSuccess(response, result);
   } catch (e) {
     return await processError(response, e.message);

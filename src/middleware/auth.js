@@ -17,7 +17,7 @@ async function isAuthenticated(request, response, next) {
 
 async function isAdmin(request, response, next) {
   try {
-    if (request.User.user.role !== "admin")
+    if (request.User.iam.role !== "admin")
       throw new Error(
         "You don't have enough permission to perform this action"
       );
