@@ -1,7 +1,6 @@
-const multer = require("multer");
-
 const { processError, processSuccess } = require("../helpers/response");
 const Items = require("../models/item.model");
+const Category = require("../models/category.model");
 
 async function createItem(request, response) {
   try {
@@ -18,16 +17,19 @@ async function createItem(request, response) {
 
     if (existingItem.length) throw new Error("Item already exists.");
 
-    const Item = await Items.create({
+    const item = new Items({
       itemTitle,
       itemDescription,
       categoryId,
       quantity,
       price,
     });
-    // Item.image = request.image.map((fileName) => ({ fileName: fileName }));
+    await item.save();
 
-    return await processSuccess(response, Item);
+    const result = {
+      item,
+    };
+    return await processSuccess(response, result);
   } catch (e) {
     return await processError(response, e.message);
   }
@@ -35,12 +37,16 @@ async function createItem(request, response) {
 
 async function updateItemById(request, response, next) {
   try {
-    const update = request.body;
-    const _id = request.params._id;
-    await items.findByIdAndUpdate(_id, update);
-    const items = await items.findById(_id);
+    const { id } = request.params;
+    const { body } = request;
+
+    if (!body.length) throw new Error("Update required.");
+
+    const item = await Items.updateOne({ _id: id }, { ...body }, { new: true });
+    if (!item) throw new Error("could not update item");
+
     const result = {
-      data: items,
+      data: item,
       message: "items has been updated",
     };
     return await processSuccess(response, result);
@@ -51,12 +57,10 @@ async function updateItemById(request, response, next) {
 
 async function getItemsByCategoryId(request, response, next) {
   try {
-    const categoryId = request.params;
-    const verifyCategoryId = await Category.findOne(categoryId);
-    if (verifyCategoryId == null) throw new Error("Invalid category Id");
+    const { id } = request.params;
+    if (!id) throw new Error("Category id is required");
 
-    const items = await Items.findOne(categoryId);
-    if (items == null) throw new Error("Could not find Items ");
+    const items = await Items.find({ categoryId: id });
 
     return await processSuccess(response, items);
   } catch (e) {
@@ -66,10 +70,12 @@ async function getItemsByCategoryId(request, response, next) {
 
 async function getItemById(request, response, next) {
   try {
-    const _id = request.params._id;
-    const item = await Items.findById(_id);
-    if (item == null) throw new Error("Item does not exist");
-    return await processSuccess(response, items);
+    const { id } = request.params;
+
+    const item = await Items.find({ _id: id });
+    // if (item == null) throw new Error("Item does not exist");
+
+    return await processSuccess(response, item);
   } catch (e) {
     return await processError(response, e.message);
   }
@@ -77,8 +83,12 @@ async function getItemById(request, response, next) {
 
 async function deleteItemById(request, response, next) {
   try {
-    const _id = request.params._id;
-    await items.findByIdAndDelete(_id);
+    const { id } = request.params;
+
+    const findAndDeleteItem = await Items.findByIdAndDelete({ _id: id });
+    if (findAndDeleteItem == null)
+      throw new Error("Could not find or delete Item");
+
     const result = {
       data: null,
       message: "items has been deleted",

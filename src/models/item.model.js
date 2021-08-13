@@ -6,17 +6,18 @@ const itemSchema = new Schema({
     required: true,
   },
   categoryId: {
-    type: Number,
+    type: String,
+    required: true,
   },
   itemDescription: {
     type: String,
   },
   quantity: {
     type: Number,
+    min: 1,
     required: true,
   },
-  image: [{ fileName: String }],
-  category: {
+  image: {
     type: String,
     required: true,
   },

@@ -5,7 +5,6 @@ const {
   generateAuthToken,
   hashObject,
 } = require("../helpers/encryption.helper");
-const mailhelper = require("../helpers/email/mailing.helper");
 const { processError, processSuccess } = require("../helpers/response");
 
 async function userSignUp(request, response) {
@@ -53,14 +52,17 @@ async function verifyAccount(request, response) {
   try {
     const { token } = request.params;
     const user = await User.findOne({ token: token });
-    if (user) {
-      user.is_verified = true;
-      await user.save();
-      message = "User is verified.";
-    } else {
-      message = "User not found.";
-    }
-    return processSuccess(response, user);
+
+    if (!user) throw new Error("User not found.");
+
+    user.is_verified = true;
+    await user.save();
+    result = {
+      message: "User is verified.",
+      user,
+    };
+
+    return processSuccess(response, result);
   } catch (e) {
     return await processError(response, e.message);
   }
@@ -96,9 +98,10 @@ async function userLogin(request, response) {
   }
 }
 
-async function getUser(request, response, next) {
+async function getUserById(request, response, next) {
   try {
-    const _id = request.params._id;
+    const _id = request.params;
+
     const user = await User.findById(_id);
     if (!user) throw new Error("User does not exist");
     return await processSuccess(response, user, { message: "User deleted" });
@@ -107,14 +110,34 @@ async function getUser(request, response, next) {
   }
 }
 
+async function getAllUsers(request, response, next) {
+  try {
+    const users = await User.find();
+    if (!users) throw new Error("There is no user");
+
+    return await processSuccess(response, users);
+  } catch (e) {
+    return await processError(response, e.message);
+  }
+}
+
 async function updateUser(request, response, next) {
   try {
-    const update = request.body;
-    const _id = request.params._id;
-    await User.findByIdAndUpdate(_id, update);
-    const user = await User.findById(_id);
+    const { _id } = request.params;
+    const { body } = request;
+
+    if (!body) throw new Error("Enter details to be updated");
+
+    const findAndEditUser = await User.findByIdAndUpdate(
+      _id,
+      { ...body },
+      { new: true }
+    );
+
+    if (!findAndEditUser) throw new Error("Could not find and update user");
+
     const result = {
-      data: user,
+      findAndEditUser,
       message: "User has been updated",
     };
     return await processSuccess(response, result);
@@ -156,7 +179,25 @@ async function forgotPassword(request, response) {
 
 async function changePassword(request, response) {
   try {
-    const { email } = request.body;
+    const { _id } = request.params;
+    const password = request.body;
+
+    if (![password]) throw new Error("Enter new password");
+
+    const changePassword = await User.findByIdAndUpdate(
+      _id,
+      { password },
+      { new: true }
+    );
+
+    if (!changePassword)
+      throw new Error("Could not find user and update user password");
+
+    const result = {
+      changePassword,
+      message: "User has been updated",
+    };
+    return await processSuccess(response, result);
   } catch (e) {
     return await processError(response, e.message);
   }
@@ -167,7 +208,8 @@ module.exports = {
   verifyAccount,
   resendToken,
   userLogin,
-  getUser,
+  getUserById,
+  getAllUsers,
   updateUser,
   deleteUser,
   resetEmail,

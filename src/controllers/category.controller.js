@@ -1,32 +1,26 @@
 const Category = require("../models/category.model");
-
-async function processError(response, error) {
-  return response.status(404).json({ payload: null, error, success: false });
-}
-
-async function processSuccess(response, success) {
-  return response
-    .status(200)
-    .json({ payload: { ...success }, error: null, success: true });
-}
+const { processError, processSuccess } = require("../helpers/response");
 
 async function createCategory(request, response) {
   try {
     const { categoryTitle, categoryDescription } = request.body;
 
-    if (!categoryTitle)
-      throw new Error("Enter the title of category to be created");
+    if (!categoryTitle) throw new Error("Category required");
     if (!categoryDescription) throw new Error("Describe the category.");
 
-    const existingCategory = await Category.find({ categoryTitle });
+    const existingCategory = await Category.findOne({ categoryTitle });
 
     if (existingCategory.length) throw new Error("Category already exists.");
 
-    const category = await Category.create({
+    const category = new Category({
       categoryTitle,
       categoryDescription,
     });
-    return await processSuccess(response, category);
+    await category.save();
+    const data = {
+      category,
+    };
+    return await processSuccess(response, data);
   } catch (e) {
     return await processError(response, e.message);
   }
@@ -34,16 +28,20 @@ async function createCategory(request, response) {
 
 async function editCategoryById(request, response) {
   try {
-    const update = request.body;
-    const { _id } = request.params._id;
-
+    const { _id } = request.params;
+    const { body } = request;
     if (!_id) throw new Error("Category Id required to edit category.");
-    if (!update) throw new Error("update details required to edit category.");
+    if (!body.length) throw new Error("Body is empty");
 
-    const findAndEditCategory = await Category.findByIdAndUpdate(_id, {
-      update,
-    });
-    if (findAndEditCategory == null) throw new Error("Category not found");
+    const findAndEditCategory = await Category.updateOne(
+      _id,
+      { ...body },
+      { upsert: true }
+    );
+
+    if (!findAndEditCategory)
+      throw new Error("Could not find and update Category");
+
     const result = {
       data: findAndEditCategory,
       message: "Category has been updated",
@@ -57,12 +55,15 @@ async function editCategoryById(request, response) {
 
 async function getCategoryById(request, response) {
   try {
-    const { categoryId } = request.params;
-    if (!categoryId) throw new Error("Category Id required");
+    const { id } = request.params;
+    if (!id) throw new Error("Category Id required");
 
-    const getCategoryById = await Category.findOne({ categoryId });
+    const getCategoryById = await Category.findOne({ _id: id });
     if (getCategoryById == null) throw new Error("Category does not exists.");
-    return await processSuccess(response, getCategoryById);
+    const result = {
+      getCategoryById,
+    };
+    return await processSuccess(response, result);
   } catch (e) {
     return await processError(response, e.message);
   }
@@ -80,15 +81,18 @@ async function getCategories(request, response) {
 
 async function deleteCategoryById(request, response) {
   try {
-    const { _id } = request.params._id;
-    if (!_id) throw new Error("Category Id required");
+    const { id } = request.params;
+    if (!id) throw new Error("Category Id required");
 
-    const deleteCategory = await Category.findByIdAndDelete(_id);
+    const deleteCategory = await Category.findByIdAndDelete({ _id: id });
     if (deleteCategory == null)
-      throw new Error("Could not find Category and delete");
+      throw new Error("Could not find Category to delete");
 
-    let message = "Category deleted successfully";
-    return await processSuccess(response, { message, deleteCategory });
+    const result = {
+      data: null,
+      message: "Category deleted successfully",
+    };
+    return await processSuccess(response, result);
   } catch (e) {
     return await processError(response, e.message);
   }

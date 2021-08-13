@@ -18,10 +18,9 @@ app.use(express.json());
 
 app.use("/", apiRoutes);
 
-/*app.get("/public", (request, response) => {
+app.get("/public", (request, response) => {
   response.sendFile(__dirname + "/index.html");
 });
-*/
 
 app.listen(PORT, () => {
   console.log(`App listening on ${PORT}`);

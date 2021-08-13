@@ -1,18 +1,19 @@
 let routes = require("express").Router();
 
-const itemController = require("../controllers/item.controller");
+const {
+  createItem,
+  updateItemById,
+  getItemById,
+  getItemsByCategoryId,
+  deleteItemById,
+} = require("../controllers/item.controller");
 const { isAuthenticated, isAdmin } = require("../middleware/auth");
 
 routes
-  .post("/create", isAuthenticated, isAdmin, itemController.createItem)
-  .put("/update/:id", isAuthenticated, isAdmin, itemController.updateItemById)
-  .get("getItem/:id", itemController.getItemById)
-  .get("/getCategoryItem/:id", itemController.getItemsByCategoryId)
-  .delete(
-    "/delete/:id",
-    isAuthenticated,
-    isAdmin,
-    itemController.deleteItemById
-  );
+  .post("/create", isAuthenticated, isAdmin, createItem)
+  .put("/update/:id", isAuthenticated, isAdmin, updateItemById)
+  .get("/get/:id", isAuthenticated, getItemById)
+  .get("/filter/:id", isAuthenticated, getItemsByCategoryId)
+  .delete("/delete/:id", isAuthenticated, isAdmin, deleteItemById);
 
 module.exports = routes;
