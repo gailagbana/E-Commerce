@@ -1,5 +1,5 @@
 let routes = require("express").Router();
-const { isAuthenticated } = require("../middleware/auth");
+const { isAuthenticated, isAdmin } = require("../middleware/auth");
 const {
   getAllCart,
   getCart,
@@ -7,7 +7,7 @@ const {
 } = require("../controllers/cart.controllers");
 
 routes
-  .get("/", isAuthenticated, getAllCart)
+  .get("/", isAuthenticated, isAdmin, getAllCart)
   .get("/:id", isAuthenticated, getCart)
   .post("/", isAuthenticated, addToCart);
 

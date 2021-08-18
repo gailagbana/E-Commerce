@@ -3,8 +3,8 @@ const { model, Schema } = require("mongoose");
 const cartSchema = new Schema({
   userId: {
     type: String,
-    unique: true,
     required: true,
+    ref: "User",
   },
   product: {
     type: Array,

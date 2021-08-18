@@ -1,4 +1,4 @@
-const { processError, processSuccess } = require("../helpers/response");
+const { processError, processSuccess } = require("../helpers/processResponse");
 const Items = require("../models/item.model");
 const Category = require("../models/category.model");
 

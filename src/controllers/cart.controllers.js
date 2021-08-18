@@ -1,5 +1,5 @@
 const Cart = require("../models/cart.model");
-const { processError, processSuccess } = require("../helpers/response");
+const { processError, processSuccess } = require("../helpers/processResponse");
 
 async function getAllCart(request, response) {
   try {

@@ -8,6 +8,7 @@ const itemSchema = new Schema({
   categoryId: {
     type: String,
     required: true,
+    ref: "Category",
   },
   itemDescription: {
     type: String,

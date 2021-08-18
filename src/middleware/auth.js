@@ -1,7 +1,7 @@
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 
-const { processError } = require("../helpers/response");
+const { processError } = require("../helpers/processResponse");
 
 async function isAuthenticated(request, response, next) {
   try {

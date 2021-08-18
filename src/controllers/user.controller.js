@@ -1,11 +1,18 @@
 const bcrypt = require("bcrypt");
-const User = require("../models/user.model");
 
+const User = require("../models/user.model");
 const {
   generateAuthToken,
   hashObject,
+  generateEncryption,
 } = require("../helpers/encryption.helper");
-const { processError, processSuccess } = require("../helpers/response");
+const {
+  createToken,
+  readToken,
+  deleteToken,
+} = require("../controllers/token.controller");
+const { processEmail } = require("../helpers/email/processEmail");
+const { processError, processSuccess } = require("../helpers/processResponse");
 
 async function userSignUp(request, response) {
   try {
@@ -19,12 +26,11 @@ async function userSignUp(request, response) {
     if (!phoneNumber) throw new Error("Phone Number is required");
     if (!password) throw new Error("Password is required");
     if (!confirmPassword) throw new Error("Confirm Password is required");
-
     if (password !== confirmPassword)
       throw new Error("Passwords do not match.");
 
-    const existingUser = await User.findOne({ email, name });
-    if (existingUser !== null) {
+    const existingUser = await User.findOne({ email, phoneNumber });
+    if (existingUser) {
       throw new Error("User already exists. Proceed to login");
     }
 
@@ -42,6 +48,14 @@ async function userSignUp(request, response) {
       token,
       user,
     };
+
+    const encryption = await generateEncryption();
+    const verficationToken = await hashObject(encryption);
+    request.tokenDetails = { token: verficationToken, userId: user._id };
+    await createToken(request, response);
+
+    await processEmail("registrationSuccessful", user, encryption);
+
     return processSuccess(response, data);
   } catch (e) {
     return processError(response, e.message);
@@ -51,7 +65,7 @@ async function userSignUp(request, response) {
 async function verifyAccount(request, response) {
   try {
     const { token } = request.params;
-    const user = await User.findOne({ token: token });
+    const user = await TokenController({ token: token });
 
     if (!user) throw new Error("User not found.");
 
@@ -62,19 +76,30 @@ async function verifyAccount(request, response) {
       user,
     };
 
+    await processEmail("verifiedSuccessfully", user, encryption);
+
     return processSuccess(response, result);
   } catch (e) {
     return await processError(response, e.message);
   }
 }
 
-async function resendToken(request, response) {
-  try {
-    const { email } = request.body;
-  } catch (e) {
-    return await processError(response, e.message);
-  }
-}
+// async function resendToken(request, response) {
+//   try {
+//     const { email } = request.body;
+//     if (!email) throw new Error("Email address required.");
+
+//     const existingUser = await findOne({ email });
+//     if (existingUser == null) throw new Error("Email does not exist.");
+
+//     const token = await generateAuthToken({ existingUser });
+//     const mailTypeToSend = "";
+//     await processEmail();
+//     return await processSuccess(response, token);
+//   } catch (e) {
+//     return await processError(response, e.message);
+//   }
+// }
 
 async function userLogin(request, response) {
   try {
@@ -92,6 +117,7 @@ async function userLogin(request, response) {
 
     const token = await generateAuthToken({ iam });
     let message = "Account logged in successfully";
+
     return await processSuccess(response, { user: iam, message, token });
   } catch (e) {
     return await processError(response, e.message);
@@ -160,18 +186,20 @@ async function deleteUser(request, response, next) {
   }
 }
 
-async function resetEmail(request, response) {
-  try {
-    const { email } = request.body;
-    if (!email) throw new Error();
-  } catch (e) {
-    return await processError(response, e.message);
-  }
-}
-
 async function forgotPassword(request, response) {
   try {
     const { email } = request.body;
+    if (!email) throw new Error("Please enter an email");
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser == null) throw new Error("Account is not registered");
+
+    const encryption = await generateEncryption();
+    const token = await hashObject(encryption);
+
+    const mailTypeToSend = "forgotPassword";
+    await processEmail(mailTypeToSend, existingUser, encryption);
+    return await processSuccess(response, result);
   } catch (e) {
     return await processError(response, e.message);
   }
@@ -184,9 +212,11 @@ async function changePassword(request, response) {
 
     if (![password]) throw new Error("Enter new password");
 
+    let encryptedPassword = await hashObject(password);
+
     const changePassword = await User.findByIdAndUpdate(
       _id,
-      { password },
+      { encryptedPassword },
       { new: true }
     );
 
@@ -197,6 +227,10 @@ async function changePassword(request, response) {
       changePassword,
       message: "User has been updated",
     };
+
+    const mailTypeToSend = "resetPassword";
+    await processEmail();
+
     return await processSuccess(response, result);
   } catch (e) {
     return await processError(response, e.message);
@@ -205,14 +239,12 @@ async function changePassword(request, response) {
 
 module.exports = {
   userSignUp,
-  verifyAccount,
-  resendToken,
   userLogin,
   getUserById,
   getAllUsers,
   updateUser,
   deleteUser,
-  resetEmail,
+  verifyAccount,
   forgotPassword,
   changePassword,
 };

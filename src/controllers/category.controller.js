@@ -1,5 +1,5 @@
 const Category = require("../models/category.model");
-const { processError, processSuccess } = require("../helpers/response");
+const { processError, processSuccess } = require("../helpers/processResponse");
 
 async function createCategory(request, response) {
   try {

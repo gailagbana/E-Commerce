@@ -1,28 +1,37 @@
+require("dotenv").config;
+
+const fs = require("fs");
+const path = require("path");
 const nodemailer = require("nodemailer");
+const handlebars = require("handlebars");
 
-async function sendEmail({ email, token }) {
-  const transporter = nodemailer.createTransport(config.smtpOptions)({
-    host: "smtp.gmail.com",
-    port: 587,
-    auth: {
-      user: "agbana.oluwatunmise@lmu.edu.ng",
-      pass: "process.env.EMAIL_PASS",
-    },
-  });
+const { EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASSWORD, FROM_EMAIL } =
+  process.env;
 
-  var mailOptions;
-  let sender = "Gail Agbana";
-  mailOptions = {
-    from: sender,
-    to: email,
-    Subject: "Email Confirmation",
-    html: `Tap this link : <a href=http://localhost:2000/confirmation/${token}></a> to confirm email. Thank You.`,
-  };
+const transporter = nodemailer.createTransport({
+  host: EMAIL_HOST,
+  port: EMAIL_PORT,
+  auth: {
+    user: EMAIL_USER,
+    pass: EMAIL_PASSWORD,
+  },
+});
 
-  await transporter.sendMail(mailOptions, function (error, response) {
-    if (error) return console.log(error);
-    console.log("Message sent");
-  });
+async function sendEmail(email, subject, payload, template) {
+  try {
+    const source = fs.readFileSync(path.join(__dirname, template), "utf8");
+    const compiledTemplate = handlebars.compile(source);
+    const options = () => ({
+      from: FROM_EMAIL,
+      to: email,
+      subject,
+      html: compiledTemplate(payload),
+    });
+
+    return await transporter.sendMail(options());
+  } catch (e) {
+    return e.message;
+  }
 }
 
-module.exports = sendEmail;
+module.exports = { sendEmail };
